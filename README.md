@@ -8,7 +8,7 @@ que se afina con tus correcciones. Detalle de uso: `SKILL.md`.
 
 Requisitos: Claude Code con la misma cuenta, Node 18+ y git.
 
-1. Clonar como skill personal (en Windows: `%USERPROFILE%.claudeskills	urno-noche`):
+1. Clonar como skill personal (en Windows: `%USERPROFILE%\.claude\skills\turno-noche`):
 
    ```
    git clone https://github.com/SrProfessional/NightTurn.git ~/.claude/skills/turno-noche
