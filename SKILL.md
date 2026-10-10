@@ -21,13 +21,14 @@ Claude Code trabaja solo, sin humano que responda. Cuatro modos según el argume
 | Esta skill, el lanzador (`${CLAUDE_SKILL_DIR}/scripts/lanzar-noche.js`) y el perfil general (`${CLAUDE_SKILL_DIR}/perfil-general.md`) | Repo propio `NightTurn` (github.com/SrProfessional/NightTurn), clonado en `~/.claude/skills/turno-noche` | `git pull` en esa carpeta |
 | Perfil del proyecto (gana si choca con el general) | `.claude/turno-noche/perfil.md` en la raíz de **cada repo de proyecto** | Se commitea en ese repo |
 | Cola, reportes y archivo `PARAR` | `~/.claude/turno-noche/proyectos/<proyecto>/` de cada PC | No viaja: el reporte se revisa en el PC donde corrió |
-| Subagente `experto` y las skills de superpowers (brainstorming, writing-plans, subagent-driven-development, verification-before-completion…) | `~/.claude/agents/` y `~/.claude/skills/` o plugin de cada PC | Ver README de la skill |
+| Subagente `experto` y las skills de superpowers (brainstorming, writing-plans, subagent-driven-development, verification-before-completion…) | Copias en `bundled/` de este repo; `scripts/instalar-dependencias.js` las copia a `~/.claude` si faltan | Vienen con el clone |
 
 `<proyecto>` = nombre de la carpeta raíz del repo git. Funciona en cualquier repo git; en una carpeta sin git, ofrece `git init` primero (el lanzador usa ramas y worktrees).
 Si un proyecto aún no tiene `.claude/turno-noche/perfil.md` pero existe el heredado `~/.claude/turno-noche/proyectos/<proyecto>/perfil.md`, úsalo; al entrenar, escribe en el del repo.
 
 ## Modo `preparar`
 
+0. Ejecuta `node "${CLAUDE_SKILL_DIR}/scripts/instalar-dependencias.js"`: copia a `~/.claude` las skills de superpowers y el agente `experto` que trae este repo, sin pisar lo existente. Si copió algo, avísale en una línea que en una sesión nueva ya estarán cargados (el turno de noche, que abre sesiones nuevas, las verá igual).
 1. Lee `perfil-general.md`, el perfil del proyecto y su `cola.md` local. Si el proyecto es nuevo: crea la `cola.md` desde `${CLAUDE_SKILL_DIR}/plantilla-cola.md` y un `.claude/turno-noche/perfil.md` semilla armado con lo que ya hay (CLAUDE.md del repo, README, memoria del proyecto si existe en este PC, convenciones visibles en el código), marcado «semilla automática, sin revisar»; no le preguntes nada para esto, y avísale en una línea que se afinará con `mañana` y que conviene commitearlo.
 2. Propón tareas nuevas desde los pendientes reales del proyecto (docs de pendientes, memoria, specs a medio hacer). Solo tareas que se puedan avanzar **en local** (ver «Alcance»). Marca `estado: pendiente`.
 3. Muestra a Santiago la cola en tabla corta (id, título, qué quedará hecho). No le hagas preguntas de diseño: eso lo resuelve el turno solo. Una sola pregunta: «¿lanzo?», con duración y tope de gasto.

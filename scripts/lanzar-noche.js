@@ -59,6 +59,8 @@ try { fs.unlinkSync(parar); } catch (_) { /* no existía */ }
 
 log(`Inicio. Proyecto=${nombre} rama=${rama} hasta=${limite.toLocaleString('sv-SE')} presupuesto=$${presupuesto}`);
 log(`Parar: crear el archivo ${parar}`);
+// Dependencias (superpowers y experto) incluidas en este repo: se copian solo si faltan.
+try { cp.spawnSync(process.execPath, [path.join(__dirname, "instalar-dependencias.js")], { stdio: "inherit" }); } catch (_) { /* no es fatal */ }
 const despierto = mantenerDespierto();
 
 const memoria = path.join(home, '.claude', 'projects', repo.replace(/[^A-Za-z0-9]/g, '-'), 'memory'); // opcional: no viaja entre PCs

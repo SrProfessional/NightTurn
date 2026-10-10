@@ -8,27 +8,21 @@ que se afina con tus correcciones. Detalle de uso: `SKILL.md`.
 
 Requisitos: Claude Code con la misma cuenta, Node 18+ y git.
 
-1. Clonar como skill personal (en Windows: `%USERPROFILE%\.claude\skills\turno-noche`):
+1. Clonar como skill personal (en Windows: `%USERPROFILE%.claudeskills	urno-noche`):
 
    ```
    git clone https://github.com/SrProfessional/NightTurn.git ~/.claude/skills/turno-noche
    ```
 
-2. Agente `experto` (lo consulta el turno para decisiones de arquitectura). Si no lo tienes:
+2. Abrir Claude Code en el repo donde la quieras y escribir `/turno-noche preparar`.
+   Eso es todo: el primer paso de `preparar` (y el lanzador) copian a `~/.claude` las skills de
+   superpowers y el agente `experto` que trae este repo en `bundled/`, sin pisar lo que ya tengas.
+   La primera vez crea además `.claude/turno-noche/perfil.md` en ese repo (conviene commitearlo).
+   Si la primera vez Claude Code no ve aún esas skills, cierra y abre la sesión.
 
-   ```
-   cp ~/.claude/skills/turno-noche/extras/experto.md ~/.claude/agents/experto.md
-   ```
-
-3. Skills de superpowers (de las que depende el proceso completo: brainstorming, writing-plans,
-   subagent-driven-development, verification-before-completion y sus compañeras). Dentro de Claude Code:
-
-   ```
-   /plugin install superpowers@claude-plugins-official
-   ```
-
-4. En cada repo donde la quieras: abrir Claude Code en la carpeta y escribir `/turno-noche preparar`.
-   La primera vez crea `.claude/turno-noche/perfil.md` en ese repo (conviene commitearlo).
+Las copias de superpowers son del proyecto https://github.com/obra/superpowers (licencia MIT; ver
+`bundled/LICENSE-superpowers.txt`). Si prefieres el plugin oficial, `/plugin install
+superpowers@claude-plugins-official` y borra las copias de `~/.claude/skills`.
 
 ## Actualizar
 
@@ -42,7 +36,7 @@ Los cambios al perfil general (`perfil-general.md`) se commitean y suben desde e
 
 | Viaja con este repo | Vive en cada repo de proyecto | Local de cada PC |
 |---|---|---|
-| Skill, lanzador, perfil general, plantilla | `.claude/turno-noche/perfil.md` | Cola y reportes (`~/.claude/turno-noche/proyectos/`) |
+| Skill, lanzador, perfil general, plantilla, y en `bundled/` superpowers + agente `experto` | `.claude/turno-noche/perfil.md` | Cola y reportes (`~/.claude/turno-noche/proyectos/`) |
 
 ## Notas
 

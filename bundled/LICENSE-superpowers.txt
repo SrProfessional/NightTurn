@@ -1,0 +1,4 @@
+Las carpetas bundled/skills/* son copias de las skills del proyecto "superpowers"
+(https://github.com/obra/superpowers), publicado bajo licencia MIT por sus autores.
+Se incluyen aquí solo para que NightTurn se instale con un único clone. Si instalas el plugin
+oficial (/plugin install superpowers@claude-plugins-official), puedes borrar las copias de ~/.claude/skills.
