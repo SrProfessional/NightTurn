@@ -1,4 +1,4 @@
-# turno-noche
+# turno-noche (repo: NightTurn)
 
 Skill de Claude Code: deja a Claude avanzando proyectos por su cuenta mientras duermes o no estás.
 Una tarea por sesión sin pantalla, solo en local, en una rama aparte, con un perfil de decisiones
@@ -11,7 +11,7 @@ Requisitos: Claude Code con la misma cuenta, Node 18+ y git.
 1. Clonar como skill personal (en Windows: `%USERPROFILE%\.claude\skills\turno-noche`):
 
    ```
-   git clone <URL-de-este-repo> ~/.claude/skills/turno-noche
+   git clone https://github.com/SrProfessional/NightTurn.git ~/.claude/skills/turno-noche
    ```
 
 2. Agente `experto` (lo consulta el turno para decisiones de arquitectura). Si no lo tienes:

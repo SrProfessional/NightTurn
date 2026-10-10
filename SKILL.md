@@ -18,7 +18,7 @@ Claude Code trabaja solo, sin humano que responda. Cuatro modos según el argume
 
 | Qué | Dónde | Cómo llega a otro PC |
 |---|---|---|
-| Esta skill, el lanzador (`${CLAUDE_SKILL_DIR}/scripts/lanzar-noche.js`) y el perfil general (`${CLAUDE_SKILL_DIR}/perfil-general.md`) | Repo propio `turno-noche`, clonado en `~/.claude/skills/turno-noche` | `git pull` en esa carpeta |
+| Esta skill, el lanzador (`${CLAUDE_SKILL_DIR}/scripts/lanzar-noche.js`) y el perfil general (`${CLAUDE_SKILL_DIR}/perfil-general.md`) | Repo propio `NightTurn` (github.com/SrProfessional/NightTurn), clonado en `~/.claude/skills/turno-noche` | `git pull` en esa carpeta |
 | Perfil del proyecto (gana si choca con el general) | `.claude/turno-noche/perfil.md` en la raíz de **cada repo de proyecto** | Se commitea en ese repo |
 | Cola, reportes y archivo `PARAR` | `~/.claude/turno-noche/proyectos/<proyecto>/` de cada PC | No viaja: el reporte se revisa en el PC donde corrió |
 | Subagente `experto` y las skills de superpowers (brainstorming, writing-plans, subagent-driven-development, verification-before-completion…) | `~/.claude/agents/` y `~/.claude/skills/` o plugin de cada PC | Ver README de la skill |

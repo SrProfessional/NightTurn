@@ -49,7 +49,7 @@ const skillEnTrabajo = path.join(trabajo, '.claude', 'skills', 'turno-noche', 'S
 const skillPersonal = path.join(home, '.claude', 'skills', 'turno-noche', 'SKILL.md');
 if (!fs.existsSync(skillEnTrabajo) && !fs.existsSync(skillPersonal)) {
   die(`La skill turno-noche no está instalada en ~/.claude/skills ni commiteada en ${trabajo}.\n` +
-      'Instálala con: git clone <URL-del-repo-turno-noche> ~/.claude/skills/turno-noche (ver README), ' +
+      'Instálala con: git clone https://github.com/SrProfessional/NightTurn.git ~/.claude/skills/turno-noche (ver README), ' +
       'o commitea .claude/skills/turno-noche en el repo del proyecto, y vuelve a lanzar.');
 }
 if (!fs.existsSync(reporteFile)) {
