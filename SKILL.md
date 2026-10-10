@@ -39,7 +39,7 @@ Si un proyecto aún no tiene `.claude/turno-noche/perfil.md` pero existe el here
 
 ## Modo `ejecutar` (nadie va a contestar)
 
-Argumentos: `--proyecto <ruta> --cola <archivo> --reporte <archivo> --hasta <hora límite>`. Trabaja en el worktree donde estás (rama `noche/AAAA-MM-DD`); el lanzador ya lo creó.
+Argumentos: `--proyecto <ruta> --cola <archivo> --reporte <archivo> --hasta <hora límite>`. Trabaja en el worktree donde estás (rama `noche/AAAA-MM-DD-<equipo>`); el lanzador ya lo creó, partiendo de la rama base actual (master). Si ese día ya había una rama sin mezclar, la continúa y la actualiza con la base; si ya estaba mezclada, la recrea. Las noches anteriores ya mezcladas se borran solas.
 
 **Prohibido en este modo:** `AskUserQuestion`, planes que esperan aprobación, «¿quieres que…?». Si dudas, decides (abajo). Si el reloj pasó `--hasta`, no empieces nada: termina con `ESTADO: fin-hora`.
 
@@ -101,7 +101,7 @@ Una invocación = una tarea:
    - **Windows**: `taskkill /PID <pid> /T /F`.
    - **macOS / Linux**: primero lista los hijos y luego mata todo junto (si matas el lanzador antes, los hijos quedan huérfanos y ya no se encuentran): `kids=$(pgrep -P <pid>); kill <pid> $kids`.
    La tarea queda `en-curso`, con posible trabajo a medias en el worktree; la siguiente corrida la retoma. Avísale.
-4. Confirma que ya no queda ningún proceso `lanzar-noche.js` y dile dónde está el reporte. El trabajo de la noche está en la rama `noche/AAAA-MM-DD`, separada de sus archivos, así que puede seguir trabajando en el repo sin choques.
+4. Confirma que ya no queda ningún proceso `lanzar-noche.js` y dile dónde está el reporte. El trabajo de la noche está en la rama `noche/AAAA-MM-DD-<equipo>`, separada de sus archivos, así que puede seguir trabajando en el repo sin choques.
 
 ## Errores comunes
 

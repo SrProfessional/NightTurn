@@ -40,7 +40,11 @@ const log = (m) => {
 };
 
 const limite = a.hasta ? proximaHora(a.hasta) : new Date(Date.now() + horas * 3600000);
-const rama = `noche/${hoy}`;
+// El nombre lleva el equipo para que dos PCs que trabajan el mismo repo no usen la misma rama.
+const equipo = os.hostname().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'equipo';
+const rama = `noche/${hoy}-${equipo}`;
+const ramaBase = git(['rev-parse', '--abbrev-ref', 'HEAD'], repo).trim();
+const shaBase = git(['rev-parse', 'HEAD'], repo).trim();
 const trabajo = a['sin-worktree'] ? repo : prepararWorktree();
 // La sesión de cada ronda corre en `trabajo`: necesita encontrar la skill instalada de forma personal
 // en este PC (lo normal) o commiteada en el repo del proyecto (el worktree solo ve lo commiteado).
@@ -53,7 +57,7 @@ if (!fs.existsSync(skillEnTrabajo) && !fs.existsSync(skillPersonal)) {
       'o commitea .claude/skills/turno-noche en el repo del proyecto, y vuelve a lanzar.');
 }
 if (!fs.existsSync(reporteFile)) {
-  fs.writeFileSync(reporteFile, `# Reporte del turno de noche — ${nombre} — ${hoy}\n\nRama: \`${rama}\`  \nCarpeta de trabajo: \`${trabajo}\`\n\n`);
+  fs.writeFileSync(reporteFile, `# Reporte del turno de noche — ${nombre} — ${hoy}\n\nRama: \`${rama}\`  \nBase: \`${ramaBase}\` @ ${shaBase.slice(0, 7)}  \nCarpeta de trabajo: \`${trabajo}\`\n\n`);
 }
 try { fs.unlinkSync(parar); } catch (_) { /* no existía */ }
 
@@ -157,12 +161,63 @@ function correrRonda(n, tope) {
   return { estado: m ? m[1] : 'continuar', costo, resumen: `ESTADO ${m ? m[1] : '(sin línea ESTADO, asumo continuar)'}` };
 }
 
+// Ejecuta git sin abortar el lanzador si falla: devuelve { ok, out }.
+function gitSuave(args, cwd) {
+  const r = cp.spawnSync('git', args, { cwd, encoding: 'utf8' });
+  return { ok: r.status === 0, out: (r.stdout || '') + (r.stderr || '') };
+}
+// (function declarations: se usan antes de esta línea, durante el arranque del script)
+function mezclada(r) { return gitSuave(['merge-base', '--is-ancestor', r, 'HEAD'], repo).ok; }
+function limpia(dir) { return gitSuave(['status', '--porcelain'], dir).out.trim() === ''; }
+
+// Borra las carpetas de noches anteriores cuya rama ya está mezclada en la base y sin cambios pendientes.
+function limpiarNochesMezcladas(carpeta, actual) {
+  if (!fs.existsSync(carpeta)) return;
+  for (const d of fs.readdirSync(carpeta)) {
+    const dir = path.join(carpeta, d);
+    if (!d.startsWith('noche-') || dir === actual || !fs.statSync(dir).isDirectory()) continue;
+    const r = gitSuave(['rev-parse', '--abbrev-ref', 'HEAD'], dir);
+    const ramaVieja = r.ok ? r.out.trim() : '';
+    if (!ramaVieja.startsWith('noche/') || !mezclada(ramaVieja) || !limpia(dir)) continue;
+    if (gitSuave(['worktree', 'remove', dir], repo).ok) {
+      gitSuave(['branch', '-d', ramaVieja], repo);
+      log(`Limpieza: noche anterior ya mezclada (${ramaVieja}), carpeta y rama eliminadas.`);
+    }
+  }
+}
+
 function prepararWorktree() {
-  const destino = path.join(home, '.config', 'superpowers', 'worktrees', nombre, `noche-${hoy}`);
-  if (fs.existsSync(destino)) return destino;
-  fs.mkdirSync(path.dirname(destino), { recursive: true });
-  const existeRama = git(['branch', '--list', rama], repo).trim() !== '';
-  git(existeRama ? ['worktree', 'add', destino, rama] : ['worktree', 'add', '-b', rama, destino, 'HEAD'], repo);
+  const carpeta = path.join(home, '.config', 'superpowers', 'worktrees', nombre);
+  const destino = path.join(carpeta, `noche-${hoy}-${equipo}`);
+  limpiarNochesMezcladas(carpeta, destino);
+  if (!['master', 'main'].includes(ramaBase)) {
+    log(`AVISO: la carpeta principal está en "${ramaBase}", no en master/main: la noche parte de ahí.`);
+  }
+  if (!limpia(repo)) log('AVISO: la carpeta principal tiene cambios sin commitear; no entran en la rama de la noche.');
+  fs.mkdirSync(carpeta, { recursive: true });
+
+  const existeRama = gitSuave(['branch', '--list', rama], repo).out.trim() !== '';
+  const hayCarpeta = fs.existsSync(destino);
+  if (existeRama || hayCarpeta) {
+    // Corrida repetida el mismo día. Si lo anterior ya está mezclado y sin pendientes, se empieza de cero
+    // desde la base actual; si tiene trabajo sin mezclar, se continúa y se intenta ponerla al día.
+    if (existeRama && mezclada(rama) && (!hayCarpeta || limpia(destino))) {
+      if (hayCarpeta) gitSuave(['worktree', 'remove', destino], repo);
+      gitSuave(['branch', '-d', rama], repo);
+      log(`La rama ${rama} ya estaba mezclada: se recrea desde ${ramaBase}.`);
+    } else {
+      if (!hayCarpeta) git(['worktree', 'add', destino, rama], repo);
+      const m = gitSuave(['merge', '--no-edit', shaBase], destino);
+      if (m.ok) {
+        log(`Se continúa ${rama} (trabajo sin mezclar) y se actualizó con ${ramaBase}.`);
+      } else {
+        gitSuave(['merge', '--abort'], destino);
+        log(`AVISO: se continúa ${rama} pero NO pudo actualizarse con ${ramaBase} (conflicto); parte desactualizada.`);
+      }
+      return destino;
+    }
+  }
+  git(['worktree', 'add', '-b', rama, destino, 'HEAD'], repo);
   return destino;
 }
 

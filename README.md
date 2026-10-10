@@ -38,6 +38,14 @@ Los cambios al perfil general (`perfil-general.md`) se commitean y suben desde e
 |---|---|---|
 | Skill, lanzador, perfil general, plantilla, y en `bundled/` superpowers + agente `experto` | `.claude/turno-noche/perfil.md` | Cola y reportes (`~/.claude/turno-noche/proyectos/`) |
 
+## Ramas de la noche
+
+- Nombre: `noche/AAAA-MM-DD-<equipo>` (el equipo evita choques si dos PCs trabajan el mismo repo).
+- Parte de la rama activa de la carpeta principal (déjala en `master` y con `git pull`); los cambios sin commitear no entran.
+- Segunda corrida el mismo día: si lo anterior ya se mezcló, recrea la rama desde la base; si no, continúa y la actualiza.
+- Las carpetas y ramas de noches ya mezcladas se limpian solas al lanzar.
+- Dos PCs no comparten cola: reparte las tareas a mano para que no repitan (ver SKILL.md, `preparar`).
+
 ## Notas
 
 - Si al lanzar falta la skill en el worktree de la noche, es porque no está instalada como skill
