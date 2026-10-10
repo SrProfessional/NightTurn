@@ -49,3 +49,7 @@ Los cambios al perfil general (`perfil-general.md`) se commitean y suben desde e
 - Si al lanzar falta la skill en el worktree de la noche, es porque no está instalada como skill
   personal ni commiteada en el repo del proyecto.
 - Solo trabajo local: nada de gasto, publicación ni producción de noche (ver «Alcance» en `SKILL.md`).
+- Sistemas: Windows (probado) y macOS (escrito con `caffeinate`, `nohup` y `pgrep`, sin probar en un Mac
+  real). En Linux funciona el motor, pero el lanzador no evita que el equipo se duerma.
+- Requisitos extra en Mac: `claude` y `node` en el PATH de la terminal desde la que se lanza.
+  En un portátil, la tapa cerrada lo duerme aunque esté enchufado.

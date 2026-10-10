@@ -32,8 +32,9 @@ Si un proyecto aún no tiene `.claude/turno-noche/perfil.md` pero existe el here
 2. Propón tareas nuevas desde los pendientes reales del proyecto (docs de pendientes, memoria, specs a medio hacer). Solo tareas que se puedan avanzar **en local** (ver «Alcance»). Marca `estado: pendiente`.
 3. Muestra a Santiago la cola en tabla corta (id, título, qué quedará hecho). No le hagas preguntas de diseño: eso lo resuelve el turno solo. Una sola pregunta: «¿lanzo?», con duración y tope de gasto.
 4. Con su sí, lanza **desacoplado** (sobrevive si se cierra esta ventana):
-   `Start-Process node -WindowStyle Hidden -ArgumentList "${CLAUDE_SKILL_DIR}/scripts/lanzar-noche.js --proyecto <ruta-del-repo> --horas 7 --presupuesto 25"`.
-   Dile en una línea cómo ver el avance (`reportes/AAAA-MM-DD.md`), que el PC debe quedar encendido y enchufado, y que para detenerlo solo tiene que escribir `/turno-noche parar` (el turno también termina solo al llegar a la hora o al tope de gasto).
+   - **Windows** (PowerShell): `Start-Process node -WindowStyle Hidden -ArgumentList "${CLAUDE_SKILL_DIR}/scripts/lanzar-noche.js --proyecto <ruta-del-repo> --horas 7 --presupuesto 25"`.
+   - **macOS / Linux** (Bash): `nohup node "${CLAUDE_SKILL_DIR}/scripts/lanzar-noche.js" --proyecto <ruta-del-repo> --horas 7 --presupuesto 25 > ~/.claude/turno-noche/lanzador-<proyecto>.out 2>&1 &` y luego `disown`.
+   Dile en una línea cómo ver el avance (`reportes/AAAA-MM-DD.md`), que el equipo debe quedar encendido y enchufado (en un portátil, con la tapa cerrada se duerme aunque esté enchufado: déjala abierta), y que para detenerlo solo tiene que escribir `/turno-noche parar` (el turno también termina solo al llegar a la hora o al tope de gasto). El lanzador evita el reposo por sí mismo en Windows y macOS; en Linux no.
 
 ## Modo `ejecutar` (nadie va a contestar)
 
@@ -91,10 +92,14 @@ Una invocación = una tarea:
 ## Modo `parar`
 
 1. Comprueba si hay turno corriendo:
-   `Get-CimInstance Win32_Process | Where-Object { $_.Name -eq "node.exe" -and $_.CommandLine -like "*lanzar-noche.js*" }`.
+   - **Windows**: `Get-CimInstance Win32_Process | Where-Object { $_.Name -eq "node.exe" -and $_.CommandLine -like "*lanzar-noche.js*" }`.
+   - **macOS / Linux**: `pgrep -f lanzar-noche.js`.
    Si no hay, dile que no hay nada que parar y ofrece `mañana`.
 2. **Con calma (por defecto):** crea el archivo vacío `~/.claude/turno-noche/proyectos/<proyecto>/PARAR`. El lanzador deja terminar la tarea en curso (hasta unos minutos), no empieza otra y escribe el cierre en el reporte.
-3. **De inmediato** (solo si Santiago dice «ya», «ahora» o hay prisa): `taskkill /PID <pid> /T /F` sobre el lanzador; eso corta también la sesión de Claude que esté trabajando. La tarea queda `en-curso`, con posible trabajo a medias en el worktree; la siguiente corrida la retoma. Avísale.
+3. **De inmediato** (solo si Santiago dice «ya», «ahora» o hay prisa): corta el lanzador y la sesión de Claude que esté trabajando.
+   - **Windows**: `taskkill /PID <pid> /T /F`.
+   - **macOS / Linux**: primero lista los hijos y luego mata todo junto (si matas el lanzador antes, los hijos quedan huérfanos y ya no se encuentran): `kids=$(pgrep -P <pid>); kill <pid> $kids`.
+   La tarea queda `en-curso`, con posible trabajo a medias en el worktree; la siguiente corrida la retoma. Avísale.
 4. Confirma que ya no queda ningún proceso `lanzar-noche.js` y dile dónde está el reporte. El trabajo de la noche está en la rama `noche/AAAA-MM-DD`, separada de sus archivos, así que puede seguir trabajando en el repo sin choques.
 
 ## Errores comunes

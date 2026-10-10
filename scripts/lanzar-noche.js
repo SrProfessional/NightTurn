@@ -164,12 +164,21 @@ function prepararWorktree() {
   return destino;
 }
 
-// Evita que Windows se duerma mientras el turno corre (la pantalla sí puede apagarse).
+// Evita que el equipo se duerma mientras el turno corre (la pantalla sí puede apagarse).
+// Windows: SetThreadExecutionState. macOS: caffeinate (-i inactividad, -s con corriente; -w acaba
+// cuando termina este proceso). Linux: sin implementar (devuelve null; el equipo puede dormirse).
 function mantenerDespierto() {
-  if (process.platform !== 'win32') return null;
-  const ps = "Add-Type -Namespace W -Name P -MemberDefinition '[DllImport(\"kernel32.dll\")] public static extern uint SetThreadExecutionState(uint f);';" +
-    `[W.P]::SetThreadExecutionState(0x80000001) | Out-Null; Wait-Process -Id ${process.pid} -ErrorAction SilentlyContinue`;
-  return cp.spawn('powershell', ['-NoProfile', '-WindowStyle', 'Hidden', '-Command', ps], { stdio: 'ignore', windowsHide: true });
+  let hijo = null;
+  if (process.platform === 'darwin') {
+    hijo = cp.spawn('caffeinate', ['-i', '-s', '-w', String(process.pid)], { stdio: 'ignore' });
+  } else if (process.platform === 'win32') {
+    const ps = "Add-Type -Namespace W -Name P -MemberDefinition '[DllImport(\"kernel32.dll\")] public static extern uint SetThreadExecutionState(uint f);';" +
+      `[W.P]::SetThreadExecutionState(0x80000001) | Out-Null; Wait-Process -Id ${process.pid} -ErrorAction SilentlyContinue`;
+    hijo = cp.spawn('powershell', ['-NoProfile', '-WindowStyle', 'Hidden', '-Command', ps], { stdio: 'ignore', windowsHide: true });
+  }
+  // Si la herramienta no existe, el turno sigue (solo que el equipo podría dormirse).
+  if (hijo) hijo.on('error', () => {});
+  return hijo;
 }
 
 function dormir(ms) { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms); }
