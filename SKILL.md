@@ -1,110 +1,109 @@
 ---
-name: turno-noche
-description: Use when the user wants Claude Code to keep advancing projects on its own while they are asleep or away ("turno de noche", "trabaja mientras duermo", "adelanta tareas sin mí", "modo autónomo", "no quiero aprobar nada"), when the launcher invokes "/turno-noche ejecutar", or when the user comes back and wants to review what the night shift did ("/turno-noche mañana").
+name: night-turn
+description: Use when the user wants Claude Code to keep advancing projects on its own while they are asleep or away ("night shift", "work while I sleep", "move tasks forward without me", "autonomous mode", "I don't want to approve anything"), when the launcher invokes "/night-turn run", or when the user comes back and wants to review what the night shift did ("/night-turn review"). Also triggers on the Spanish phrasing ("turno de noche", "trabaja mientras duermo", "adelanta tareas sin mí").
 ---
 
-# Turno de noche
+# NightTurn (night shift)
 
-Claude Code trabaja solo, sin humano que responda. Cuatro modos según el argumento:
+Claude Code works alone, with no human to answer. Four modes depending on the argument:
 
-| Argumento | Quién lo usa | Qué hace |
+| Argument | Who uses it | What it does |
 |---|---|---|
-| `preparar` (o sin argumento) | Santiago presente, antes de irse | Arma la cola, muestra el plan, lanza el turno |
-| `ejecutar --proyecto X ...` | El lanzador, sin nadie delante | UNA tarea por invocación, luego termina |
-| `mañana` | Santiago de vuelta | Revisa el reporte y entrena el perfil |
-| `parar` | Santiago de vuelta, con el turno aún corriendo | Detiene el turno (con calma o de inmediato) |
+| `prepare` (or no argument) | The user, present, before leaving | Builds the queue, shows the plan, launches the shift |
+| `run --project X ...` | The launcher, with nobody there | ONE task per invocation, then exits |
+| `review` | The user, back | Reviews the report and trains the profile |
+| `stop` | The user, back, with the shift still running | Stops the shift (gracefully or immediately) |
 
-## Dónde vive cada cosa
+## Where everything lives
 
-| Qué | Dónde | Cómo llega a otro PC |
+| What | Where | How it reaches another PC |
 |---|---|---|
-| Esta skill, el lanzador (`${CLAUDE_SKILL_DIR}/scripts/lanzar-noche.js`) y el perfil general (`${CLAUDE_SKILL_DIR}/perfil-general.md`) | Repo propio `NightTurn` (github.com/SrProfessional/NightTurn), clonado en `~/.claude/skills/turno-noche` | `git pull` en esa carpeta |
-| Perfil del proyecto (gana si choca con el general) | `.claude/turno-noche/perfil.md` en la raíz de **cada repo de proyecto** | Se commitea en ese repo |
-| Cola, reportes y archivo `PARAR` | `~/.claude/turno-noche/proyectos/<proyecto>/` de cada PC | No viaja: el reporte se revisa en el PC donde corrió |
-| Subagente `experto` y las skills de superpowers (brainstorming, writing-plans, subagent-driven-development, verification-before-completion…) | Copias en `bundled/` de este repo; `scripts/instalar-dependencias.js` las copia a `~/.claude` si faltan | Vienen con el clone |
+| This skill, the launcher (`${CLAUDE_SKILL_DIR}/scripts/launch-night.js`) and the general profile (`${CLAUDE_SKILL_DIR}/general-profile.md`) | Its own repo `NightTurn` (github.com/SrProfessional/NightTurn), cloned into `~/.claude/skills/night-turn` | `git pull` in that folder |
+| Project profile (wins over the general one on conflict) | `.claude/night-turn/profile.md` at the root of **each project repo** | Committed in that repo |
+| Queue (`queue.md`), reports (`reports/`) and the stop-signal file (`STOP`) | `~/.claude/night-turn/projects/<project>/` on each PC | Does not travel: review the report on the PC where it ran |
+| `experto` subagent and the superpowers skills (brainstorming, writing-plans, subagent-driven-development, verification-before-completion…) | Copies in this repo's `bundled/`; `scripts/install-dependencies.js` copies them to `~/.claude` if missing | Come with the clone |
 
-`<proyecto>` = nombre de la carpeta raíz del repo git. Funciona en cualquier repo git; en una carpeta sin git, ofrece `git init` primero (el lanzador usa ramas y worktrees).
-Si un proyecto aún no tiene `.claude/turno-noche/perfil.md` pero existe el heredado `~/.claude/turno-noche/proyectos/<proyecto>/perfil.md`, úsalo; al entrenar, escribe en el del repo.
+`<project>` = name of the git repo's root folder. Works in any git repo; in a folder without git, offer `git init` first (the launcher uses branches and worktrees).
 
-## Modo `preparar`
+## Mode `prepare`
 
-0. Ejecuta `node "${CLAUDE_SKILL_DIR}/scripts/instalar-dependencias.js"`: copia a `~/.claude` las skills de superpowers y el agente `experto` que trae este repo, sin pisar lo existente. Si copió algo, avísale en una línea que en una sesión nueva ya estarán cargados (el turno de noche, que abre sesiones nuevas, las verá igual).
-1. Lee `perfil-general.md`, el perfil del proyecto y su `cola.md` local. Si el proyecto es nuevo: crea la `cola.md` desde `${CLAUDE_SKILL_DIR}/plantilla-cola.md` y un `.claude/turno-noche/perfil.md` semilla armado con lo que ya hay (CLAUDE.md del repo, README, memoria del proyecto si existe en este PC, convenciones visibles en el código), marcado «semilla automática, sin revisar»; no le preguntes nada para esto, y avísale en una línea que se afinará con `mañana` y que conviene commitearlo.
-2. Propón tareas nuevas desde los pendientes reales del proyecto (docs de pendientes, memoria, specs a medio hacer). Solo tareas que se puedan avanzar **en local** (ver «Alcance»). Marca `estado: pendiente`.
-3. Muestra a Santiago la cola en tabla corta (id, título, qué quedará hecho). No le hagas preguntas de diseño: eso lo resuelve el turno solo. Una sola pregunta: «¿lanzo?», con duración y tope de gasto.
-4. Con su sí, lanza **desacoplado** (sobrevive si se cierra esta ventana):
-   - **Windows** (PowerShell): `Start-Process node -WindowStyle Hidden -ArgumentList "${CLAUDE_SKILL_DIR}/scripts/lanzar-noche.js --proyecto <ruta-del-repo> --horas 7 --presupuesto 25"`.
-   - **macOS / Linux** (Bash): `nohup node "${CLAUDE_SKILL_DIR}/scripts/lanzar-noche.js" --proyecto <ruta-del-repo> --horas 7 --presupuesto 25 > ~/.claude/turno-noche/lanzador-<proyecto>.out 2>&1 &` y luego `disown`.
-   Dile en una línea cómo ver el avance (`reportes/AAAA-MM-DD.md`), que el equipo debe quedar encendido y enchufado (en un portátil, con la tapa cerrada se duerme aunque esté enchufado: déjala abierta), y que para detenerlo solo tiene que escribir `/turno-noche parar` (el turno también termina solo al llegar a la hora o al tope de gasto). El lanzador evita el reposo por sí mismo en Windows y macOS; en Linux no.
+0. Run `node "${CLAUDE_SKILL_DIR}/scripts/install-dependencies.js"`: copies the superpowers skills and the `experto` agent bundled in this repo into `~/.claude`, without overwriting anything. If it copied something, tell the user in one line that a new session will have them loaded (the night shift, which opens new sessions, will see them anyway).
+1. Read `general-profile.md`, the project profile and its local `queue.md`. If the project is new: create `queue.md` from `${CLAUDE_SKILL_DIR}/queue-template.md` and a seed `.claude/night-turn/profile.md` built from what already exists (the repo's CLAUDE.md, README, the project's memory if it exists on this PC, conventions visible in the code), marked "automatic seed, unreviewed"; don't ask anything for this, and tell the user in one line that it will be refined with `review` and should be committed.
+2. Propose new tasks from the project's real backlog (pending-work docs, memory, half-finished specs). Only tasks that can be advanced **locally** (see "Scope"). Mark them `status: pending`.
+3. Show the user the queue as a short table (id, title, what will be done). Don't ask design questions: the shift resolves those on its own. Ask a single question: "Launch?", with the duration and spending cap.
+4. With their yes, launch **detached** (survives if this window is closed):
+   - **Windows** (PowerShell): `Start-Process node -WindowStyle Hidden -ArgumentList "${CLAUDE_SKILL_DIR}/scripts/launch-night.js --project <repo-path> --hours 7 --budget 25"`.
+   - **macOS / Linux** (Bash): `nohup node "${CLAUDE_SKILL_DIR}/scripts/launch-night.js" --project <repo-path> --hours 7 --budget 25 > ~/.claude/night-turn/launcher-<project>.out 2>&1 &` and then `disown`.
+   Tell them in one line how to follow progress (`reports/YYYY-MM-DD.md`), that the computer must stay on and plugged in (on a laptop, closing the lid puts it to sleep even when plugged in: leave it open), and that to stop it they only need to type `/night-turn stop` (the shift also ends on its own at the deadline or the spending cap). The launcher prevents sleep by itself on Windows and macOS; not on Linux.
 
-## Modo `ejecutar` (nadie va a contestar)
+## Mode `run` (nobody is going to answer)
 
-Argumentos: `--proyecto <ruta> --cola <archivo> --reporte <archivo> --hasta <hora límite>`. Trabaja en el worktree donde estás (rama `noche/AAAA-MM-DD-<equipo>`); el lanzador ya lo creó, partiendo de la rama base actual (master). Si ese día ya había una rama sin mezclar, la continúa y la actualiza con la base; si ya estaba mezclada, la recrea. Las noches anteriores ya mezcladas se borran solas.
+Arguments: `--project <path> --queue <file> --report <file> --until <deadline>`. Work in the worktree where you are (branch `night/YYYY-MM-DD-<machine>`); the launcher already created it, starting from the current base branch (master). If a branch from that day already existed unmerged, it is continued and updated with the base; if it was already merged, it is recreated. Previous nights already merged are deleted automatically.
 
-**Prohibido en este modo:** `AskUserQuestion`, planes que esperan aprobación, «¿quieres que…?». Si dudas, decides (abajo). Si el reloj pasó `--hasta`, no empieces nada: termina con `ESTADO: fin-hora`.
+**Forbidden in this mode:** `AskUserQuestion`, plans that wait for approval, "do you want me to…?". If in doubt, decide (below). If the clock is past `--until`, don't start anything: finish with `STATUS: end-time`.
 
-Una invocación = una tarea:
+One invocation = one task:
 
-1. **Lee** el perfil general y el del proyecto (si falta alguno, trabaja con el otro y anótalo en el reporte), la cola, el reporte de hoy y `git status`. Lee también el `MEMORY.md` del proyecto si el lanzador lo pasó con `--add-dir` (en el worktree la memoria automática no carga sola; en un PC distinto puede no existir).
-2. **Elige** primero cualquier `en-curso` (la ronda anterior se cortó: retómala revisando qué quedó hecho en la rama); si no hay, la `pendiente` de menor prioridad numérica cuyas dependencias estén `hecha`. Si no hay, deriva hasta 3 tareas nuevas de los pendientes del proyecto (alcance local). Si tampoco hay: `ESTADO: fin-sin-trabajo`.
-   Si el reporte de hoy ya cerró una tarea (`necesita-ok`, `bloqueada`) aunque la cola aún diga `pendiente`, el reporte manda: no la retomes. Pasa cuando el clasificador de permisos niega editar la cola (ocurrió con una tarea titulada «Producción»): no lo rodees, deja el estado real en el reporte.
-3. Marca `en-curso` con la hora.
-4. **Responde tú las preguntas** que normalmente le harías a Santiago (autoentrevista):
-   - Respóndelas con el perfil. Anota cada una en el reporte: pregunta · respuesta · en qué regla del perfil te apoyaste · confianza (alta/media/baja).
-   - Si el perfil no cubre el caso: elige la opción **más reversible y pequeña**, márcala `Supuesto`, confianza baja.
-   - Decisión de arquitectura con trade-offs reales que afecta varios subsistemas, o el mismo bug sin arreglar tras dos intentos distintos: consulta al subagente `experto` (herramienta `Agent`, `subagent_type: "experto"`), máximo 2 veces por tarea, pasándole qué intentaste y qué falló, y pidiéndole diagnóstico y dirección, no implementación. Para la segunda consulta de la misma tarea usa `SendMessage` al mismo agente en vez de lanzar otro. El Experto reemplaza a Santiago, no lo molestes.
-5. **Ejecuta** con el mismo proceso que seguirías con él presente, según los perfiles (para trabajo grande, por defecto brainstorming → spec → plan → subagent-driven-development; directo si el cambio es pequeño). La autoentrevista sustituye las preguntas del brainstorming; el spec lleva una sección «Decisiones asumidas (por revisar)».
-6. **Verifica** (verification-before-completion): pruebas reales, no suposiciones. Commit en la rama de la noche. Nunca `git push`, nunca merge a master.
-7. **Cierra la tarea**: `hecha` · `bloqueada: <motivo>` · `necesita-ok: <qué decisión o acción humana>`. Escribe la entrada del reporte. Si necesitas algo de Santiago, deja el comando o paso **listo para copiar y pegar** (él no opera infra; ver perfil).
-8. Última línea de tu respuesta, exacta: `ESTADO: continuar` | `ESTADO: fin-sin-trabajo` | `ESTADO: fin-hora` | `ESTADO: fin-bloqueado`.
+1. **Read** the general profile and the project profile (if one is missing, work with the other and note it in the report), the queue, today's report and `git status`. Also read the project's `MEMORY.md` if the launcher passed it with `--add-dir` (in the worktree auto-memory doesn't load by itself; on a different PC it may not exist).
+2. **Pick** first any `in-progress` task (the previous round was cut off: resume it by checking what's already done on the branch); if none, the `pending` one with the lowest priority number whose dependencies are `done`. If none, derive up to 3 new tasks from the project's backlog (local scope). If there are none either: `STATUS: end-no-work`.
+   If today's report already closed a task (`needs-ok`, `blocked`) even though the queue still says `pending`, the report wins: don't pick it up again. This happens when the permission classifier denies editing the queue (it happened with a task titled "Production"): don't work around it, leave the real state in the report.
+3. Mark it `in-progress` with the time.
+4. **Answer the questions** you would normally ask the user (self-interview):
+   - Answer them from the profile. Log each one in the report: question · answer · which profile rule you relied on · confidence (high/medium/low).
+   - If the profile doesn't cover the case: pick the **smallest, most reversible** option, mark it `Assumption`, low confidence.
+   - Architecture decision with real trade-offs affecting several subsystems, or the same bug unfixed after two different attempts: consult the `experto` subagent (`Agent` tool, `subagent_type: "experto"`), at most 2 times per task, telling it what you tried and what failed, and asking for diagnosis and direction, not implementation. For the second consultation in the same task use `SendMessage` to the same agent instead of launching another. The Expert replaces the user; don't bother the user.
+5. **Execute** with the same process you would follow with the user present, according to the profiles (for large work, by default brainstorming → spec → plan → subagent-driven-development; directly if the change is small). The self-interview replaces the brainstorming questions; the spec carries a section "Assumed decisions (to review)".
+6. **Verify** (verification-before-completion): real tests, not assumptions. Commit on the night branch. Never `git push`, never merge to master.
+7. **Close the task**: `done` · `blocked: <reason>` · `needs-ok: <which human decision or action>`. Write the report entry. If you need something from the user, leave the command or step **ready to copy and paste** (they don't operate infrastructure; see profile).
+8. Last line of your reply, exact: `STATUS: continue` | `STATUS: end-no-work` | `STATUS: end-time` | `STATUS: end-blocked`.
 
-### Alcance: lo que sí y lo que no
+### Scope: what is and isn't allowed
 
-**Sí (local, reversible):** leer código y docs, escribir código, pruebas, specs, planes, runbooks, investigar en la web, commits en la rama de la noche, trabajar con archivos del repo.
+**Yes (local, reversible):** read code and docs, write code, tests, specs, plans, runbooks, research on the web, commits on the night branch, work with files in the repo.
 
-**Nunca de noche, sin importar qué tan razonable parezca:**
-- Gastar dinero (HeyGen, Kie.ai, Meta Ads, llamadas de pago a APIs fuera de pruebas gratuitas).
-- Publicar o enviar a mundo exterior (Instagram, Facebook, Slack real, correo).
-- Tocar producción: desplegar o activar workflows, escribir en Postgres de producción, `kubectl`, `ssh`, borrar ejecuciones o workflows.
-- Tocar credenciales, permisos o `settings*.json`; agregar reglas de permiso propias.
-- `git push`, merge a master, `--force`, reescribir historia.
+**Never at night, no matter how reasonable it seems:**
+- Spending money (HeyGen, Kie.ai, Meta Ads, paid API calls outside free tests).
+- Publishing or sending to the outside world (Instagram, Facebook, real Slack, email).
+- Touching production: deploying or activating workflows, writing to the production Postgres, `kubectl`, `ssh`, deleting executions or workflows.
+- Touching credentials, permissions or `settings*.json`; adding your own permission rules.
+- `git push`, merge to master, `--force`, rewriting history.
 
-**Si una acción es denegada (permiso, clasificador, credencial faltante): no la rodees.** Ni otra herramienta, ni otro lenguaje, ni un subagente, ni «el usuario lo aprobó». Registra `necesita-ok` con el paso exacto y pasa a otra tarea. Esto aplica más de noche que de día.
+**If an action is denied (permission, classifier, missing credential): don't work around it.** No other tool, no other language, no subagent, no "the user approved it". Record `needs-ok` with the exact step and move to another task. This applies even more at night than by day.
 
-### Racionalizaciones que son banderas rojas
+### Rationalizations that are red flags
 
-| Pensamiento | Realidad |
+| Thought | Reality |
 |---|---|
-| «Es solo una lectura a producción, no hace daño» | El worktree no tiene permisos de producción a propósito. Déjalo en `necesita-ok`. |
-| «Esto no encaja, mejor lo descarto del spec» | Prohibido descartar o recortar en silencio. Va a «Decisiones asumidas» o `necesita-ok`. |
-| «Santiago seguro diría que sí» | Si el perfil no lo dice, es `Supuesto` con confianza baja y la opción más reversible. |
-| «Ya casi acaba, puedo probar con gasto real» | El gasto real lo autoriza él, con costo estimado, de día. |
-| «Le pregunto por si acaso» | No hay nadie. Decide, registra, sigue. |
+| "It's just a read from production, no harm" | The worktree has no production permissions on purpose. Leave it as `needs-ok`. |
+| "This doesn't fit, better drop it from the spec" | Silently dropping or trimming is forbidden. It goes in "Assumed decisions" or `needs-ok`. |
+| "The user would surely say yes" | If the profile doesn't say so, it's an `Assumption` with low confidence and the most reversible option. |
+| "It's almost done, I can try with real spend" | Real spend is authorized by the user, with an estimated cost, by day. |
+| "I'll ask just in case" | There's nobody. Decide, log, move on. |
 
-## Modo `mañana`
+## Mode `review`
 
-1. Lee el reporte más reciente y `git log` de la rama de la noche.
-2. Preséntale a Santiago un resumen de 10 líneas: qué quedó hecho, qué está listo para revisar (con la rama), qué necesita su OK.
-3. Repasa las **decisiones tomadas por ti** con `AskUserQuestion` en lote (hasta 4 por tanda, priorizando confianza baja y las irreversibles): «¿Bien / Mal / Depende?».
-4. Cada «Mal» o «Depende» **entrena el perfil**: añade una regla fechada en la sección «Aprendido de correcciones», con el *por qué* en sus palabras. Va al `.claude/turno-noche/perfil.md` del proyecto si solo tiene sentido ahí, a `${CLAUDE_SKILL_DIR}/perfil-general.md` si valdría para cualquier proyecto; ante la duda, al del proyecto (más fácil de promover después que de deshacer). Si coincide con una regla vigente, ajústala en vez de duplicarla. Las confirmadas con «Bien» suben su confianza.
-   Dile qué archivos cambiaron y que **hay que commitearlos**: el del proyecto en el repo del proyecto; el general en la carpeta de la skill (`git -C ${CLAUDE_SKILL_DIR} commit` y `push`). Si no, el otro PC no recibe lo aprendido.
-5. Las tareas `necesita-ok` que él resuelva pasan a `pendiente` en la cola.
+1. Read the most recent report and the night branch's `git log`.
+2. Present the user a 10-line summary: what got done, what's ready to review (with the branch), what needs their OK.
+3. Go over the **decisions you made** with `AskUserQuestion` in batches (up to 4 per round, prioritizing low confidence and irreversible ones): "Good / Bad / It depends?".
+4. Every "Bad" or "It depends" **trains the profile**: add a dated rule in the "Learned from corrections" section, with the *why* in their words. It goes to the project's `.claude/night-turn/profile.md` if it only makes sense there, to `${CLAUDE_SKILL_DIR}/general-profile.md` if it would hold for any project; when in doubt, the project's (easier to promote later than to undo). If it matches an existing rule, adjust it instead of duplicating it. Rules confirmed with "Good" gain confidence.
+   Tell them which files changed and that **they must be committed**: the project's in the project repo; the general one in the skill folder (`git -C ${CLAUDE_SKILL_DIR} commit` and `push`). Otherwise the other PC doesn't receive what was learned.
+5. `needs-ok` tasks they resolve go back to `pending` in the queue.
 
-## Modo `parar`
+## Mode `stop`
 
-1. Comprueba si hay turno corriendo:
-   - **Windows**: `Get-CimInstance Win32_Process | Where-Object { $_.Name -eq "node.exe" -and $_.CommandLine -like "*lanzar-noche.js*" }`.
-   - **macOS / Linux**: `pgrep -f lanzar-noche.js`.
-   Si no hay, dile que no hay nada que parar y ofrece `mañana`.
-2. **Con calma (por defecto):** crea el archivo vacío `~/.claude/turno-noche/proyectos/<proyecto>/PARAR`. El lanzador deja terminar la tarea en curso (hasta unos minutos), no empieza otra y escribe el cierre en el reporte.
-3. **De inmediato** (solo si Santiago dice «ya», «ahora» o hay prisa): corta el lanzador y la sesión de Claude que esté trabajando.
+1. Check whether a shift is running:
+   - **Windows**: `Get-CimInstance Win32_Process | Where-Object { $_.Name -eq "node.exe" -and $_.CommandLine -like "*launch-night.js*" }`.
+   - **macOS / Linux**: `pgrep -f launch-night.js`.
+   If none, tell them there is nothing to stop and offer `review`.
+2. **Gracefully (default):** create the empty file `~/.claude/night-turn/projects/<project>/STOP`. The launcher lets the current task finish (up to a few minutes), doesn't start another, and writes the closing section in the report.
+3. **Immediately** (only if the user says "now", "right away" or is in a hurry): kill the launcher and the Claude session that is working.
    - **Windows**: `taskkill /PID <pid> /T /F`.
-   - **macOS / Linux**: primero lista los hijos y luego mata todo junto (si matas el lanzador antes, los hijos quedan huérfanos y ya no se encuentran): `kids=$(pgrep -P <pid>); kill <pid> $kids`.
-   La tarea queda `en-curso`, con posible trabajo a medias en el worktree; la siguiente corrida la retoma. Avísale.
-4. Confirma que ya no queda ningún proceso `lanzar-noche.js` y dile dónde está el reporte. El trabajo de la noche está en la rama `noche/AAAA-MM-DD-<equipo>`, separada de sus archivos, así que puede seguir trabajando en el repo sin choques.
+   - **macOS / Linux**: first list the children and then kill everything together (if you kill the launcher first, the children are orphaned and can no longer be found): `kids=$(pgrep -P <pid>); kill <pid> $kids`.
+   The task stays `in-progress`, with possible half-finished work in the worktree; the next run picks it up. Let them know.
+4. Confirm no `launch-night.js` process remains and tell them where the report is. The night's work is on the branch `night/YYYY-MM-DD-<machine>`, separate from their files, so they can keep working in the repo without clashes.
 
-## Errores comunes
+## Common mistakes
 
-- Intentar varias tareas en una invocación: el contexto se llena y la calidad baja. Una y termina; el lanzador abre sesión nueva.
-- Declarar `hecha` sin correr las pruebas.
-- Dejar una pregunta sin contestar «porque requiere a Santiago»: o la contestas con el perfil, o la registras como `necesita-ok` y avanzas con otra tarea.
+- Attempting several tasks in one invocation: the context fills up and quality drops. One and finish; the launcher opens a new session.
+- Declaring `done` without running the tests.
+- Leaving a question unanswered "because it requires the user": either answer it from the profile, or record it as `needs-ok` and move on to another task.
